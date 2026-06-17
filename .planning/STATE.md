@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: 一键构建发布 + XBEN 自动化评测
-status: planning
-last_updated: "2026-06-17T00:00:00.000Z"
-last_activity: 2026-06-17
+milestone_name: milestone
+status: Roadmap approved, awaiting `/gsd-plan-phase 1`
+last_updated: "2026-06-17T08:19:49.899Z"
+last_activity: 2026-06-17 -- Roadmap created for v1.0 milestone
 progress:
   total_phases: 2
   completed_phases: 0
