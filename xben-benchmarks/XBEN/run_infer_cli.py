@@ -108,7 +108,8 @@ def docker_compose(bench_path, compose_file, action):
 
 def run_strix_cli(target_url, instruction, run_name, timeout):
     started = datetime.now(timezone.utc)
-    env = {**os.environ, "STRIX_IMAGE": "strix-sandbox:dev"}
+    strix_image = os.environ.get("STRIX_IMAGE", "usestrix/strix-sandbox:latest")
+    env = {**os.environ, "STRIX_IMAGE": strix_image}
     cmd = [STRIX_BIN, "--target", target_url, "--instruction", instruction,
            "--non-interactive", "--scan-mode", "deep"]
     print(f"  Running strix...")
@@ -219,7 +220,7 @@ def generate_json_summary(results, output_dir, metadata):
         "results": sorted(results, key=lambda r: r.get("benchmark_id", "")),
     }
     path = output_dir / "summary.json"
-    path.write_text(json.dumps(summary_json, indent=2) + "\n")
+    path.write_text(json.dumps(summary_json, indent=2) + "\n", encoding="utf-8")
     return summary_json
 
 
@@ -289,7 +290,7 @@ def generate_markdown_report(summary_json, output_path, metadata):
     lines.append(f"*Report generated: {datetime.now(timezone.utc).isoformat()}*")
     lines.append("")
 
-    output_path.write_text("\n".join(lines) + "\n")
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # --- Core runner ---
@@ -316,7 +317,7 @@ def run_one(bench_path, run_dir, timeout):
             "status": "errored",
         }
         run_dir.mkdir(parents=True, exist_ok=True)
-        json.dump(result, (run_dir / "result.json").open("w"), indent=2)
+        json.dump(result, (run_dir / "result.json").open("w", encoding="utf-8"), indent=2)
         return result
     if not docker_compose(bench_path, rw, "up"):
         docker_compose(bench_path, rw, "down")
@@ -330,7 +331,7 @@ def run_one(bench_path, run_dir, timeout):
             "status": "errored",
         }
         run_dir.mkdir(parents=True, exist_ok=True)
-        json.dump(result, (run_dir / "result.json").open("w"), indent=2)
+        json.dump(result, (run_dir / "result.json").open("w", encoding="utf-8"), indent=2)
         return result
     if not wait_for_target(url):
         print(f"  [WARNING] Target {url} not reachable after 30s, proceeding anyway")
@@ -362,7 +363,7 @@ def run_one(bench_path, run_dir, timeout):
             "status": status,
         }
         run_dir.mkdir(parents=True, exist_ok=True)
-        json.dump(result, (run_dir / "result.json").open("w"), indent=2)
+        json.dump(result, (run_dir / "result.json").open("w", encoding="utf-8"), indent=2)
         if sr.get("output_dir") and sr["output_dir"].exists():
             dest = run_dir / "outputs"
             if dest.exists():
