@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 1: Build & Release Pipeline** -- One-click build scripts, version coherence, Docker Compose deployment, and GitHub Release automation (completed 2026-06-17)
-- [ ] **Phase 2: XBEN Evaluation Runner** -- CLI-driven challenge filtering, reliable Docker lifecycle, and structured pass/fail reporting by difficulty and vulnerability type
+- [x] **Phase 2: XBEN Evaluation Runner** -- CLI-driven challenge filtering, reliable Docker lifecycle, and structured pass/fail reporting by difficulty and vulnerability type (completed 2026-06-17)
 
 ## Phase Details
 
@@ -47,7 +47,7 @@
 5. User can inspect a structured JSON results file containing per-challenge pass/fail status, elapsed time, and discovered flags for every challenge executed
 6. User can open a formatted Markdown report with summary statistics, difficulty breakdown, vulnerability-type breakdown, and timing data
 
-**Plans:** TBD
+**Plans:** 0/1 plans complete
 **UI hint:** yes
 
 ## Progress
@@ -55,4 +55,4 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Build & Release Pipeline | 1/1 | Complete    | 2026-06-17 |
-| 2. XBEN Evaluation Runner | 0/0 | Not started | - |
+| 2. XBEN Evaluation Runner | 0/1 | Complete    | 2026-06-17 |

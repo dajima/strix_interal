@@ -18,11 +18,11 @@ Requirements for v1.0 milestone: 一键构建发布 + XBEN 自动化评测
 
 ### XBEN Evaluation (XBEN)
 
-- [ ] **XBEN-01**: 挑战子集选择功能，支持按难度等级 (`--level`)、漏洞标签 (`--tags`) 和数量限制 (`--limit`) 过滤要运行的挑战
-- [ ] **XBEN-02**: 通过率统计报告，按难度等级（Easy/Medium/Hard）和漏洞类型分类汇总通过/失败结果
-- [ ] **XBEN-03**: 评测结果 JSON 汇总文件，记录每个挑战的 pass/fail 状态、耗时和发现的 flag
-- [ ] **XBEN-04**: Docker 容器可靠清理，在挑战执行前后确保无残余容器/网络/卷（使用唯一项目名 + `docker compose down --volumes --remove-orphans`）
-- [ ] **XBEN-05**: 评测结果 Markdown 报告生成，包含汇总统计、难度分解、漏洞类型分解和时间数据
+- [x] **XBEN-01**: 挑战子集选择功能，支持按难度等级 (`--level`)、漏洞标签 (`--tags`) 和数量限制 (`--limit`) 过滤要运行的挑战
+- [x] **XBEN-02**: 通过率统计报告，按难度等级（Easy/Medium/Hard）和漏洞类型分类汇总通过/失败结果
+- [x] **XBEN-03**: 评测结果 JSON 汇总文件，记录每个挑战的 pass/fail 状态、耗时和发现的 flag
+- [x] **XBEN-04**: Docker 容器可靠清理，在挑战执行前后确保无残余容器/网络/卷（使用唯一项目名 + `docker compose down --volumes --remove-orphans`）
+- [x] **XBEN-05**: 评测结果 Markdown 报告生成，包含汇总统计、难度分解、漏洞类型分解和时间数据
 
 ## v2.0 Requirements
 
@@ -74,11 +74,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUILD-04 | Phase 1 | Complete |
 | BUILD-05 | Phase 1 | Complete |
 | BUILD-06 | Phase 1 | Complete |
-| XBEN-01 | Phase 2 | Pending |
-| XBEN-02 | Phase 2 | Pending |
-| XBEN-03 | Phase 2 | Pending |
-| XBEN-04 | Phase 2 | Pending |
-| XBEN-05 | Phase 2 | Pending |
+| XBEN-01 | Phase 2 | Complete |
+| XBEN-02 | Phase 2 | Complete |
+| XBEN-03 | Phase 2 | Complete |
+| XBEN-04 | Phase 2 | Complete |
+| XBEN-05 | Phase 2 | Complete |
 
 **Coverage:**
 
