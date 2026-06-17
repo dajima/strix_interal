@@ -23,13 +23,36 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 def _find_strix_binary():
+    """Auto-discover strix binary built by Phase 1.
+
+    Searches dist/ and dist/release/ for the platform-appropriate binary:
+    - Linux:   strix-*-linux-x86_64 (ELF)
+    - Windows: strix-*-windows-x86_64.exe (PE32+)
+    Returns the newest match via sorted reverse, or None.
+    """
     import glob as _glob
-    candidates = sorted(
-        _glob.glob("dist/strix-*-linux-x86_64"), reverse=True
-    ) + sorted(
-        _glob.glob("dist/release/strix-*-linux-x86_64"), reverse=True
-    )
-    return os.path.abspath(candidates[0]) if candidates else None
+
+    if sys.platform == "win32":
+        patterns = [
+            "dist/strix-*-windows-x86_64.exe",
+            "dist/release/strix-*-windows-x86_64.exe",
+            "dist/strix.exe",
+            "dist/strix",
+        ]
+    else:
+        patterns = [
+            "dist/strix-*-linux-x86_64",
+            "dist/release/strix-*-linux-x86_64",
+            "dist/strix",
+            "dist/strix.exe",
+        ]
+
+    for pat in patterns:
+        candidates = sorted(_glob.glob(pat), reverse=True)
+        if candidates:
+            return os.path.abspath(candidates[0])
+
+    return None
 
 STRIX_BIN = os.environ.get("STRIX_BIN") or _find_strix_binary() or "strix"
 DOCKER_HOST_IP = "host.docker.internal"
