@@ -9,12 +9,12 @@ Requirements for v1.0 milestone: 一键构建发布 + XBEN 自动化评测
 
 ### Build & Release (BUILD)
 
-- [ ] **BUILD-01**: 单命令构建脚本，支持编译 strix Linux 二进制文件（通过 PyInstaller 打包 `strix.spec`）
-- [ ] **BUILD-02**: 单命令构建 Docker 沙箱镜像（基于 `containers/Dockerfile`）
-- [ ] **BUILD-03**: 版本号从 `pyproject.toml` 统一提取，确保二进制、Docker 镜像和 Git tag 版本一致
-- [ ] **BUILD-04**: Docker Compose 部署文件，用户可以通过 `docker compose up` 一条命令部署和运行 strix
-- [ ] **BUILD-05**: `workflow_dispatch` 一键发布触发，在 GitHub Actions 中点击即可执行完整构建发布流程
-- [ ] **BUILD-06**: GitHub Release 自动发布产物，包括 Linux 二进制文件、Docker 镜像推送、docker-compose.yml 和校验文件 (checksums)
+- [x] **BUILD-01**: 单命令构建脚本，支持编译 strix Linux 二进制文件（通过 PyInstaller 打包 `strix.spec`）
+- [x] **BUILD-02**: 单命令构建 Docker 沙箱镜像（基于 `containers/Dockerfile`）
+- [x] **BUILD-03**: 版本号从 `pyproject.toml` 统一提取，确保二进制、Docker 镜像和 Git tag 版本一致
+- [x] **BUILD-04**: Docker Compose 部署文件，用户可以通过 `docker compose up` 一条命令部署和运行 strix
+- [x] **BUILD-05**: `workflow_dispatch` 一键发布触发，在 GitHub Actions 中点击即可执行完整构建发布流程
+- [x] **BUILD-06**: GitHub Release 自动发布产物，包括 Linux 二进制文件、Docker 镜像推送、docker-compose.yml 和校验文件 (checksums)
 
 ### XBEN Evaluation (XBEN)
 
@@ -68,12 +68,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 1 | Pending |
-| BUILD-02 | Phase 1 | Pending |
-| BUILD-03 | Phase 1 | Pending |
-| BUILD-04 | Phase 1 | Pending |
-| BUILD-05 | Phase 1 | Pending |
-| BUILD-06 | Phase 1 | Pending |
+| BUILD-01 | Phase 1 | Complete |
+| BUILD-02 | Phase 1 | Complete |
+| BUILD-03 | Phase 1 | Complete |
+| BUILD-04 | Phase 1 | Complete |
+| BUILD-05 | Phase 1 | Complete |
+| BUILD-06 | Phase 1 | Complete |
 | XBEN-01 | Phase 2 | Pending |
 | XBEN-02 | Phase 2 | Pending |
 | XBEN-03 | Phase 2 | Pending |
@@ -81,6 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XBEN-05 | Phase 2 | Pending |
 
 **Coverage:**
+
 - v1.0 requirements: 11 total
 - Mapped to phases: 11
 - Unmapped: 0 ✓
