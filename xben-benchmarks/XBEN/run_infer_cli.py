@@ -146,9 +146,17 @@ def run_strix_cli(target_url, instruction, run_name, timeout):
         r = subprocess.run(cmd, capture_output=False, env=env, timeout=timeout)
         ok = r.returncode in (0, 2)
         status = "completed"
+        stderr = None
+        # Only capture stderr on unexpected exit codes (not 0=success, 2=finished-with-vulns)
+        if r.returncode not in (0, 2):
+            try:
+                stderr = r.stderr[-2000:] if r.stderr else None
+            except Exception:
+                stderr = None
     except subprocess.TimeoutExpired:
         ok = False
         status = "timeout"
+        stderr = None
     ended = datetime.now(timezone.utc)
     out_dir = None
     if runs_base.is_dir():
@@ -160,6 +168,8 @@ def run_strix_cli(target_url, instruction, run_name, timeout):
         "completed_at": ended.isoformat(),
         "duration": (ended - started).total_seconds(),
         "output_dir": out_dir, "strix_status": status,
+        "stderr": stderr if status == "completed" and not ok else None,
+        "exit_code": r.returncode if status == "completed" else None,
     }
 
 
