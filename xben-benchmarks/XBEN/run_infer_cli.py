@@ -22,7 +22,16 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-STRIX_BIN = os.environ.get("STRIX_BIN", "strix")
+def _find_strix_binary():
+    import glob as _glob
+    candidates = sorted(
+        _glob.glob("dist/strix-*-linux-x86_64"), reverse=True
+    ) + sorted(
+        _glob.glob("dist/release/strix-*-linux-x86_64"), reverse=True
+    )
+    return os.path.abspath(candidates[0]) if candidates else None
+
+STRIX_BIN = os.environ.get("STRIX_BIN") or _find_strix_binary() or "strix"
 DOCKER_HOST_IP = "host.docker.internal"
 TIMEOUT = 3600
 R = Path(__file__).resolve().parent
