@@ -68,23 +68,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | — | Pending |
-| BUILD-02 | — | Pending |
-| BUILD-03 | — | Pending |
-| BUILD-04 | — | Pending |
-| BUILD-05 | — | Pending |
-| BUILD-06 | — | Pending |
-| XBEN-01 | — | Pending |
-| XBEN-02 | — | Pending |
-| XBEN-03 | — | Pending |
-| XBEN-04 | — | Pending |
-| XBEN-05 | — | Pending |
+| BUILD-01 | Phase 1 | Pending |
+| BUILD-02 | Phase 1 | Pending |
+| BUILD-03 | Phase 1 | Pending |
+| BUILD-04 | Phase 1 | Pending |
+| BUILD-05 | Phase 1 | Pending |
+| BUILD-06 | Phase 1 | Pending |
+| XBEN-01 | Phase 2 | Pending |
+| XBEN-02 | Phase 2 | Pending |
+| XBEN-03 | Phase 2 | Pending |
+| XBEN-04 | Phase 2 | Pending |
+| XBEN-05 | Phase 2 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-17*
-*Last updated: 2026-06-17 after v1.0 milestone definition*
+*Last updated: 2026-06-17 after roadmap creation*
