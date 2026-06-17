@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+# PyInstaller requires binutils on Linux
+RUN apt-get update && apt-get install -y --no-install-recommends binutils && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir pyinstaller
+
+WORKDIR /build
+COPY pyproject.toml strix.spec ./
+COPY strix/ strix/
+COPY containers/ containers/
+
+RUN pip install --no-cache-dir "openai-agents[litellm]==0.14.6" "pydantic>=2.11.3" "pydantic-settings>=2.13.0" rich docker "textual>=6.0.0" "requests>=2.32.0" "cvss>=3.2" "caido-sdk-client>=0.2.0"
+RUN pyinstaller strix.spec --noconfirm
+RUN mkdir -p /output && cp dist/strix /output/ && chmod +x /output/strix

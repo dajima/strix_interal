@@ -85,3 +85,11 @@ Thumbs.db
 schema.graphql
 
 .opencode/
+
+# Docker build
+.docker-config/
+ubuntu-export.tar
+
+# Validation benchmarks (nested repository)
+validation-benchmarks/
+xben-benchmarks/validation-benchmarks.zip

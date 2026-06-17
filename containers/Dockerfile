@@ -2,6 +2,15 @@ FROM kalilinux/kali-rolling:latest
 
 LABEL description="AI Agent Penetration Testing Environment with Comprehensive Automated Tools"
 
+# Docker Desktop HTTP proxy can exhaust connection limits during large apt
+# downloads. Configure retries + moderate concurrency to work around this.
+# Keep default HTTP sources (HTTPS mirrors fail due to proxy SSL interception).
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/99-retries && \
+    echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/99-retries && \
+    echo 'Acquire::https::Timeout "30";' >> /etc/apt/apt.conf.d/99-retries && \
+    echo 'Acquire::Queue-Mode "access";' >> /etc/apt/apt.conf.d/99-retries && \
+    echo 'APT::Acquire::http::Dl-Limit "1024";' >> /etc/apt/apt.conf.d/99-retries
+
 RUN apt-get update && \
     apt-get install -y kali-archive-keyring sudo && \
     apt-get update && \
