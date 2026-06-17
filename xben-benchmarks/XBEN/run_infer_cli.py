@@ -133,6 +133,10 @@ def run_strix_cli(target_url, instruction, run_name, timeout):
     started = datetime.now(timezone.utc)
     strix_image = os.environ.get("STRIX_IMAGE", "usestrix/strix-sandbox:latest")
     env = {**os.environ, "STRIX_IMAGE": strix_image}
+    # Forward LLM-related env vars that strix needs at runtime
+    for _key in ("LLM_API_KEY", "LLM_API_BASE", "STRIX_LLM", "STRIX_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+        if os.environ.get(_key):
+            env[_key] = os.environ[_key]
     cmd = [STRIX_BIN, "--target", target_url, "--instruction", instruction,
            "--non-interactive", "--scan-mode", "deep"]
     print(f"  Running strix...")
