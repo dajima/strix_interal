@@ -165,6 +165,10 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                         live.update(create_live_status())
                         time.sleep(2)
                     except Exception:
+                        logger.debug(
+                            "CLI status update thread stopping due to error",
+                            exc_info=True,
+                        )
                         break
 
             update_thread = threading.Thread(target=update_status, daemon=True)
@@ -187,6 +191,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             finally:
                 stop_updates.set()
                 update_thread.join(timeout=1)
+                # best-effort cleanup; must not mask scan errors
                 with contextlib.suppress(Exception):
                     await session_manager.cleanup(args.run_name)
 

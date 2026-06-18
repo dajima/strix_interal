@@ -298,6 +298,7 @@ def get_version() -> str:
 
         return version("strix-agent")
     except Exception:
+        logger.debug("Could not determine strix-agent package version", exc_info=True)
         return "unknown"
 
 

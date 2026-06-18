@@ -304,14 +304,15 @@ async def run_strix_scan(
         logger.exception("Strix scan %s failed", scan_id)
         if root_id is not None:
             await coordinator.cancel_descendants(root_id)
+            # best-effort: status update must not mask the original error
             with contextlib.suppress(Exception):
                 await coordinator.set_status(root_id, "failed")
         raise
     finally:
         for s in sessions_to_close:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(Exception):  # best-effort session cleanup
                 s.close()
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(Exception):  # best-effort snapshot
             await coordinator._maybe_snapshot()
         if cleanup_on_exit:
             logger.info("Tearing down sandbox session for scan %s", scan_id)

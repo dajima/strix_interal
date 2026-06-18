@@ -35,8 +35,8 @@ def is_first_run() -> bool:
     try:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.touch()
-    except Exception:  # noqa: BLE001, S110
-        pass  # nosec B110
+    except Exception:  # noqa: BLE001
+        logger.debug("Failed to create first-run marker at %s", marker, exc_info=True)
     _FIRST_RUN_CACHED = True
     return True
 

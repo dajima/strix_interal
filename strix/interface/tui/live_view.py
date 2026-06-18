@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +13,9 @@ if TYPE_CHECKING:
 
 from strix.core.paths import runtime_state_dir
 from strix.interface.tui.history import load_session_history
+
+
+logger = logging.getLogger(__name__)
 
 
 class TuiLiveView:
@@ -30,6 +34,11 @@ class TuiLiveView:
         try:
             agents_data = json.loads(agents_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            logger.warning(
+                "Failed to read agents.json from %s; starting with empty state",
+                agents_path,
+                exc_info=True,
+            )
             return
         statuses = agents_data.get("statuses") or {}
         names = agents_data.get("names") or {}

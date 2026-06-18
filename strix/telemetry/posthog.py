@@ -94,7 +94,7 @@ def end(report_state: "ReportState", exit_reason: str = "completed") -> None:
         end_iso = report_state.end_time or datetime.now(start.tzinfo).isoformat()
         duration = (datetime.fromisoformat(end_iso.replace("Z", "+00:00")) - start).total_seconds()
     except (ValueError, TypeError, AttributeError):
-        pass
+        logger.debug("posthog: failed to compute scan duration", exc_info=True)
 
     llm_props: dict[str, int | float] = {}
     try:
@@ -108,7 +108,7 @@ def end(report_state: "ReportState", exit_reason: str = "completed") -> None:
                 "llm_cost": float(usage.get("cost") or 0.0),
             }
     except (TypeError, ValueError, AttributeError):
-        pass
+        logger.debug("posthog: failed to extract LLM usage stats", exc_info=True)
 
     _send(
         "scan_ended",

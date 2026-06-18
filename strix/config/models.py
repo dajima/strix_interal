@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
     from agents.models.interface import ModelProvider
 
     from strix.config.settings import Settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class StrixProvider(MultiProvider):
@@ -90,6 +94,11 @@ def _mirror_api_key_to_provider_env(model_name: str | None, api_key: str) -> Non
     try:
         report = litellm.validate_environment(model=name.lower())
     except Exception:  # noqa: BLE001
+        logger.debug(
+            "litellm.validate_environment failed for model %s; skipping API key mirroring",
+            name,
+            exc_info=True,
+        )
         return
     for env_key in report.get("missing_keys") or []:
         if env_key.endswith("_API_KEY"):

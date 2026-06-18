@@ -100,6 +100,11 @@ def _read_json_overrides(path: Path) -> dict[str, dict[str, Any]]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
+        logger.warning(
+            "Failed to read config overrides from %s; using defaults",
+            path,
+            exc_info=True,
+        )
         return {}
     env_block = data.get("env", {}) if isinstance(data, dict) else {}
     if not isinstance(env_block, dict):
