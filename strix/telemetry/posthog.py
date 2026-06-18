@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import urllib.request
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -18,8 +19,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_POSTHOG_PUBLIC_API_KEY = "phc_7rO3XRuNT5sgSKAl6HDIrWdSGh1COzxw0vxVIAR6vVZ"
+_POSTHOG_DEFAULT_KEY = "phc_7rO3XRuNT5sgSKAl6HDIrWdSGh1COzxw0vxVIAR6vVZ"
 _POSTHOG_HOST = "https://us.i.posthog.com"
+
+
+def _posthog_api_key() -> str:
+    return os.environ.get("STRIX_POSTHOG_API_KEY", _POSTHOG_DEFAULT_KEY)
 
 
 def _is_enabled() -> bool:
@@ -32,7 +37,7 @@ def _send(event: str, properties: dict[str, Any]) -> None:
         return
     try:
         payload = {
-            "api_key": _POSTHOG_PUBLIC_API_KEY,
+            "api_key": _posthog_api_key(),
             "event": event,
             "distinct_id": SESSION_ID,
             "properties": properties,

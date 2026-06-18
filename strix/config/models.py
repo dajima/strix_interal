@@ -77,6 +77,37 @@ def configure_sdk_model_defaults(settings: Settings) -> None:
         set_default_openai_api("responses")
 
 
+_ALLOWED_PROVIDER_KEY_VARS = frozenset(
+    {
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "GEMINI_API_KEY",
+        "COHERE_API_KEY",
+        "GROQ_API_KEY",
+        "MISTRAL_API_KEY",
+        "AZURE_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "TOGETHER_API_KEY",
+        "FIREWORKS_AI_API_KEY",
+        "PERPLEXITYAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "REPLICATE_API_KEY",
+        "ANYSCALE_API_KEY",
+        "DATABRICKS_API_KEY",
+        "AI21_API_KEY",
+        "NLP_CLOUD_API_KEY",
+        "VOYAGE_API_KEY",
+        "CLOUDFLARE_API_KEY",
+        "CODESTRAL_API_KEY",
+        "SAMBANOVA_API_KEY",
+        "CEREBRAS_API_KEY",
+        "XAI_API_KEY",
+        "NOVITA_API_KEY",
+    }
+)
+
+
 def _mirror_api_key_to_provider_env(model_name: str | None, api_key: str) -> None:
     if not model_name:
         return
@@ -92,7 +123,7 @@ def _mirror_api_key_to_provider_env(model_name: str | None, api_key: str) -> Non
     except Exception:  # noqa: BLE001
         return
     for env_key in report.get("missing_keys") or []:
-        if env_key.endswith("_API_KEY"):
+        if env_key in _ALLOWED_PROVIDER_KEY_VARS:
             os.environ.setdefault(env_key, api_key)
 
 
