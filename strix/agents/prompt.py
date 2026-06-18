@@ -66,7 +66,7 @@ def render_system_prompt(
     interactive: bool = False,
     system_prompt_context: dict[str, Any] | None = None,
 ) -> str:
-    """Render the system prompt. Returns empty string on template failure."""
+    """Render the system prompt. Raises on template failure."""
     try:
         prompt_dir = get_strix_resource_path("agents", _PROMPT_DIRNAME)
         skills_dir = get_strix_resource_path("skills")
@@ -95,8 +95,11 @@ def render_system_prompt(
             **skill_content,
         )
     except Exception:
-        logger.exception("render_system_prompt failed; returning empty prompt")
-        return ""
+        logger.exception(
+            "render_system_prompt failed; re-raising — "
+            "an empty system prompt would produce undefined agent behavior",
+        )
+        raise
     else:
         logger.debug(
             "render_system_prompt: scan_mode=%s root=%s whitebox=%s skills=%d prompt_len=%d",

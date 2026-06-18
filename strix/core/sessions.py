@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from agents.memory import SQLiteSession
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -59,6 +63,7 @@ async def strip_all_images_from_session(session: Session) -> bool:
     try:
         await session.add_items(rebuilt_items)
     except Exception:
+        logger.warning("add_items failed after clear_session; retrying once", exc_info=True)
         with contextlib.suppress(Exception):
             await session.add_items(rebuilt_items)
         raise

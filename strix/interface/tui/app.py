@@ -841,7 +841,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
             chat_input.show_vertical_scrollbar = False
             chat_input.show_horizontal_scrollbar = False
             chat_input.focus()
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_focus_chat_input: widget not ready, deferring", exc_info=True)
             self.call_after_refresh(self._focus_chat_input)
 
     def _focus_agents_tree(self) -> None:
@@ -858,7 +859,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
             if agents_tree.root.children:
                 first_node = agents_tree.root.children[0]
                 agents_tree.select_node(first_node)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_focus_agents_tree: widget not ready, deferring", exc_info=True)
             self.call_after_refresh(self._focus_agents_tree)
 
     def on_mount(self) -> None:
@@ -889,7 +891,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
             if not self._is_widget_safe(chat_history) or not self._is_widget_safe(agents_tree):
                 return
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_on_update_tick: widgets not ready", exc_info=True)
             return
 
         self._sync_agent_graph()
@@ -998,7 +1001,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             chat_history = self.query_one("#chat_history", VerticalScroll)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_update_chat_view: chat_history widget not found", exc_info=True)
             return
 
         if not self._is_widget_safe(chat_history):
@@ -1165,7 +1169,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
             status_display = self.query_one("#agent_status_display", Horizontal)
             status_text = self.query_one("#status_text", Static)
             keymap_indicator = self.query_one("#keymap_indicator", Static)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_update_agent_status_display: widgets not found", exc_info=True)
             return
 
         widgets = [status_display, status_text, keymap_indicator]
@@ -1193,13 +1198,18 @@ class StrixTUIApp(App):  # type: ignore[misc]
             if should_animate:
                 self._start_dot_animation()
 
-        except (KeyError, Exception):
+        except Exception:
+            logger.debug(
+                "_update_agent_status_display: failed to update status content",
+                exc_info=True,
+            )
             self._safe_widget_operation(status_display.add_class, "hidden")
 
     def _update_stats_display(self) -> None:
         try:
             stats_display = self.query_one("#stats_display", Static)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_update_stats_display: widget not found", exc_info=True)
             return
 
         if not self._is_widget_safe(stats_display):
@@ -1223,7 +1233,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
         """Update the vulnerabilities panel with current vulnerability data."""
         try:
             vuln_panel = self.query_one("#vulnerabilities_panel", VulnerabilitiesPanel)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_update_vulnerabilities_panel: widget not found", exc_info=True)
             return
 
         if not self._is_widget_safe(vuln_panel):
@@ -1421,7 +1432,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             agents_tree = self.query_one("#agents_tree", Tree)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("_add_agent_node: agents_tree widget not found", exc_info=True)
             return
 
         agent_name_raw = agent_data.get("name", "Agent")
@@ -1554,7 +1566,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             agents_tree = self.query_one("#agents_tree", Tree)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("handle_tree_highlight: agents_tree widget not found", exc_info=True)
             return
 
         if self.focused == agents_tree and node.data:
@@ -1621,7 +1634,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             self.query_one("#main_container")
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("action_toggle_help: main_container not found", exc_info=True)
             return
 
         if isinstance(self.screen, HelpScreen):
@@ -1643,7 +1657,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             self.query_one("#main_container")
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("action_request_quit: main_container not found", exc_info=True)
             await self.action_custom_quit()
             return
 
@@ -1666,7 +1681,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         try:
             self.query_one("#main_container")
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("action_stop_selected_agent: main_container not found", exc_info=True)
             return
 
         self.push_screen(StopAgentScreen(agent_name, self.selected_agent_id))
@@ -1728,7 +1744,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
     def _is_widget_safe(self, widget: Any) -> bool:
         try:
             _ = widget.screen
-        except (AttributeError, ValueError, Exception):
+        except Exception:
             return False
         else:
             return bool(widget.is_mounted)
@@ -1738,7 +1754,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
     ) -> bool:
         try:
             operation(*args, **kwargs)
-        except (AttributeError, ValueError, Exception):
+        except Exception:
             return False
         else:
             return True
@@ -1750,7 +1766,8 @@ class StrixTUIApp(App):  # type: ignore[misc]
         try:
             sidebar = self.query_one("#sidebar", Vertical)
             chat_area = self.query_one("#chat_area_container", Vertical)
-        except (ValueError, Exception):
+        except Exception:
+            logger.debug("on_resize: sidebar/chat_area widgets not found", exc_info=True)
             return
 
         if event.size.width < self.SIDEBAR_MIN_WIDTH:

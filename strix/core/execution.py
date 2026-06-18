@@ -254,6 +254,7 @@ async def respawn_subagents(
             )
         except Exception:
             logger.exception("respawn %s failed; marking crashed", child_id)
+            # best-effort: mark crashed even if coordinator fails
             with contextlib.suppress(Exception):
                 await coordinator.set_status(child_id, "crashed")
 

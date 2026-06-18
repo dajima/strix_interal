@@ -99,7 +99,7 @@ def end(report_state: ReportState, exit_reason: str = "completed") -> None:
             datetime.fromisoformat(end_iso.replace("Z", "+00:00")) - scan_start
         ).total_seconds()
     except (ValueError, TypeError, AttributeError):
-        pass
+        logger.debug("scarf: failed to compute scan duration", exc_info=True)
 
     llm_props: dict[str, int | float] = {}
     try:
@@ -113,7 +113,7 @@ def end(report_state: ReportState, exit_reason: str = "completed") -> None:
                 "llm_cost": float(usage.get("cost") or 0.0),
             }
     except (TypeError, ValueError, AttributeError):
-        pass
+        logger.debug("scarf: failed to extract LLM usage stats", exc_info=True)
 
     _send(
         "scan_ended",

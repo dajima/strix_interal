@@ -1,5 +1,6 @@
 import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
@@ -21,6 +22,9 @@ from rich.panel import Panel
 from rich.text import Text
 
 from strix.config import load_settings
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_severity_color(severity: str) -> str:
@@ -421,6 +425,7 @@ def _derive_target_label_for_run_name(targets_info: list[dict[str, Any]] | None)
             parsed = urlparse(url)
             return str(parsed.netloc or parsed.path or url)
         except Exception:
+            logger.debug("Failed to parse URL for run name label: %s", url, exc_info=True)
             return str(url)
 
     if target_type == "repository":
@@ -437,6 +442,11 @@ def _derive_target_label_for_run_name(targets_info: list[dict[str, Any]] | None)
         try:
             return str(Path(path_str).name or path_str)
         except Exception:
+            logger.debug(
+                "Failed to extract path name for run name label: %s",
+                path_str,
+                exc_info=True,
+            )
             return str(path_str)
 
     if target_type == "ip_address":
@@ -618,6 +628,7 @@ def _extract_github_base_sha(env: dict[str, str]) -> str | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
+        logger.debug("Failed to read GitHub event payload from %s", path, exc_info=True)
         return None
 
     base_sha = payload.get("pull_request", {}).get("base", {}).get("sha")
