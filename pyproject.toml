@@ -55,6 +55,9 @@ dev = [
   "bandit>=1.8.3",
   "pre-commit>=4.2.0",
   "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15'",
+  "pytest>=9.1.0",
+  "pytest-cov>=7.1.0",
+  "pytest-asyncio>=1.4.0",
 ]
 
 [build-system]
@@ -103,6 +106,10 @@ module = [
 ]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
 
 # ============================================================================
 # Ruff Configuration (Fast Python Linter & Formatter)
@@ -230,6 +237,7 @@ ignore = [
 "strix/interface/tui/app.py" = ["BLE001", "PLC0415", "PLR0912", "PLR0915", "SIM105"]
 "strix/interface/main.py" = ["BLE001", "PLC0415", "PLR0912", "PLR0915"]
 "strix/interface/tui/renderers/agent_message_renderer.py" = ["PLC0415"]
+"tests/**/*.py" = ["INP001", "ARG001", "ARG002", "T20", "PLC0415", "TC003", "E501"]
 
 [tool.ruff.lint.isort]
 force-single-line = false
@@ -275,6 +283,25 @@ reportUnusedClass = true
 reportUnusedFunction = true
 reportUnusedVariable = true
 reportDuplicateImport = true
+
+# ============================================================================
+# Pytest Configuration
+# ============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["strix"]
+omit = ["strix/interface/tui/*", "strix/interface/main.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
 
 # ============================================================================
 # Black Configuration (Code Formatter)
