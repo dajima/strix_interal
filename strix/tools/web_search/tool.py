@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Any
 
@@ -11,6 +10,7 @@ import requests
 from agents import RunContextWrapper, function_tool
 
 from strix.config import load_settings
+from strix.utils.tool_response import tool_json
 
 
 logger = logging.getLogger(__name__)
@@ -176,4 +176,4 @@ async def web_search(ctx: RunContextWrapper, query: str) -> str:
             ticket title for a senior security engineer.
     """
     result = await asyncio.to_thread(_do_search, query)
-    return json.dumps(result, ensure_ascii=False, default=str)
+    return tool_json(result)

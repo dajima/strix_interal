@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import json
-
 from agents import function_tool
+
+from strix.utils.tool_response import tool_json
 
 
 @function_tool(timeout=10)
@@ -33,5 +33,5 @@ async def think(thought: str) -> str:
         thought: The reasoning to record. Must be non-empty.
     """
     if not thought or not thought.strip():
-        return json.dumps({"success": False, "error": "Thought cannot be empty"})
-    return json.dumps({"success": True, "message": "Thought recorded"})
+        return tool_json({"success": False, "error": "Thought cannot be empty"})
+    return tool_json({"success": True, "message": "Thought recorded"})

@@ -1,13 +1,12 @@
-from functools import cache
 from typing import Any, ClassVar
 
 from pygments.lexers import PythonLexer
-from pygments.styles import get_style_by_name
 from rich.text import Text
 from textual.widgets import Static
 
 from .base_renderer import BaseToolRenderer
 from .registry import register_tool_renderer
+from .syntax_highlight import highlight_tokens
 
 
 def _coerce_dict(value: Any) -> dict[str, Any]:
@@ -20,12 +19,6 @@ def _coerce_list_of_dicts(value: Any) -> list[dict[str, Any]]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, dict)]
     return []
-
-
-@cache
-def _get_style_colors() -> dict[Any, str]:
-    style = get_style_by_name("native")
-    return {token: f"#{style_def['color']}" for token, style_def in style if style_def["color"]}
 
 
 FIELD_STYLE = "bold #4ade80"
@@ -52,26 +45,8 @@ class CreateVulnerabilityReportRenderer(BaseToolRenderer):
     }
 
     @classmethod
-    def _get_token_color(cls, token_type: Any) -> str | None:
-        colors = _get_style_colors()
-        while token_type:
-            if token_type in colors:
-                return colors[token_type]
-            token_type = token_type.parent
-        return None
-
-    @classmethod
     def _highlight_python(cls, code: str) -> Text:
-        lexer = PythonLexer()
-        text = Text()
-
-        for token_type, token_value in lexer.get_tokens(code):
-            if not token_value:
-                continue
-            color = cls._get_token_color(token_type)
-            text.append(token_value, style=color)
-
-        return text
+        return highlight_tokens(PythonLexer(), code)
 
     @classmethod
     def _get_cvss_color(cls, cvss_score: float) -> str:

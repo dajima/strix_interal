@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import tempfile
-import threading
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agents import RunContextWrapper, function_tool
+
+from strix.utils.json_store import JsonStore
+from strix.utils.tool_response import tool_json
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -20,29 +23,15 @@ logger = logging.getLogger(__name__)
 
 _notes_storage: dict[str, dict[str, Any]] = {}
 _VALID_NOTE_CATEGORIES = ["general", "findings", "methodology", "questions", "plan", "wiki"]
-_notes_lock = threading.RLock()
 _DEFAULT_CONTENT_PREVIEW_CHARS = 280
 
-_notes_path: Path | None = None
+_store = JsonStore("notes.json")
 
 
 def hydrate_notes_from_disk(state_dir: Path) -> None:
-    global _notes_path  # noqa: PLW0603
-    _notes_path = state_dir / "notes.json"
-    with _notes_lock:
+    with _store.lock:
         _notes_storage.clear()
-        if not _notes_path.exists():
-            return
-        try:
-            data = json.loads(_notes_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            logger.exception(
-                "notes.json at %s is unreadable; starting with empty notes",
-                _notes_path,
-            )
-            return
-        if not isinstance(data, dict):
-            return
+        data = _store.hydrate(state_dir)
         _notes_storage.update(
             {
                 nid: note
@@ -50,36 +39,16 @@ def hydrate_notes_from_disk(state_dir: Path) -> None:
                 if isinstance(nid, str) and isinstance(note, dict)
             }
         )
-        logger.info(
-            "notes hydrated from %s (%d note(s))",
-            _notes_path,
-            len(_notes_storage),
-        )
+        if _notes_storage:
+            logger.info(
+                "notes hydrated from %s (%d note(s))",
+                state_dir / "notes.json",
+                len(_notes_storage),
+            )
 
 
 def _persist() -> None:
-    path = _notes_path
-    if path is None:
-        return
-    try:
-        payload = json.dumps(_notes_storage, ensure_ascii=False, default=str)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with (
-            _notes_lock,
-            tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=str(path.parent),
-                prefix=f".{path.name}.",
-                suffix=".tmp",
-                delete=False,
-            ) as tmp,
-        ):
-            tmp.write(payload)
-            tmp_path = Path(tmp.name)
-        tmp_path.replace(path)
-    except Exception:
-        logger.exception("notes persist to %s failed", path)
+    _store.persist(_notes_storage)
 
 
 def _filter_notes(
@@ -88,6 +57,7 @@ def _filter_notes(
     search_query: str | None = None,
 ) -> list[dict[str, Any]]:
     filtered: list[dict[str, Any]] = []
+    search_lower = search_query.lower() if search_query else None
     for note_id, note in _notes_storage.items():
         if category and note.get("category") != category:
             continue
@@ -95,8 +65,7 @@ def _filter_notes(
             note_tags = note.get("tags", [])
             if not any(tag in note_tags for tag in tags):
                 continue
-        if search_query:
-            search_lower = search_query.lower()
+        if search_lower:
             title_match = search_lower in note.get("title", "").lower()
             content_match = search_lower in note.get("content", "").lower()
             if not (title_match or content_match):
@@ -138,7 +107,7 @@ def _create_note_impl(
     category: str = "general",
     tags: list[str] | None = None,
 ) -> dict[str, Any]:
-    with _notes_lock:
+    with _store.lock:
         try:
             if not title or not title.strip():
                 return {"success": False, "error": "Title cannot be empty", "note_id": None}
@@ -183,7 +152,7 @@ def _list_notes_impl(
     search: str | None = None,
     include_content: bool = False,
 ) -> dict[str, Any]:
-    with _notes_lock:
+    with _store.lock:
         try:
             filtered = _filter_notes(category=category, tags=tags, search_query=search)
             notes = [_to_note_listing_entry(n, include_content=include_content) for n in filtered]
@@ -204,7 +173,7 @@ def _list_notes_impl(
 
 
 def _get_note_impl(note_id: str) -> dict[str, Any]:
-    with _notes_lock:
+    with _store.lock:
         try:
             if not note_id or not note_id.strip():
                 return {"success": False, "error": "Note ID cannot be empty", "note": None}
@@ -229,7 +198,7 @@ def _update_note_impl(
     content: str | None = None,
     tags: list[str] | None = None,
 ) -> dict[str, Any]:
-    with _notes_lock:
+    with _store.lock:
         try:
             if note_id not in _notes_storage:
                 return {"success": False, "error": f"Note with ID '{note_id}' not found"}
@@ -258,7 +227,7 @@ def _update_note_impl(
 
 
 def _delete_note_impl(note_id: str) -> dict[str, Any]:
-    with _notes_lock:
+    with _store.lock:
         try:
             if note_id not in _notes_storage:
                 return {"success": False, "error": f"Note with ID '{note_id}' not found"}
@@ -314,10 +283,8 @@ async def create_note(
         category: One of the categories above. Default ``"general"``.
         tags: Optional free-form tags.
     """
-    return json.dumps(
+    return tool_json(
         await asyncio.to_thread(_create_note_impl, title, content, category, tags),
-        ensure_ascii=False,
-        default=str,
     )
 
 
@@ -347,7 +314,7 @@ async def list_notes(
         include_content: When False (default) entries have a preview;
             when True the full ``content`` is included.
     """
-    return json.dumps(
+    return tool_json(
         await asyncio.to_thread(
             _list_notes_impl,
             category=category,
@@ -355,8 +322,6 @@ async def list_notes(
             search=search,
             include_content=include_content,
         ),
-        ensure_ascii=False,
-        default=str,
     )
 
 
@@ -367,8 +332,8 @@ async def get_note(ctx: RunContextWrapper, note_id: str) -> str:
     Args:
         note_id: Note id from ``create_note`` or a ``list_notes`` entry.
     """
-    return json.dumps(
-        await asyncio.to_thread(_get_note_impl, note_id), ensure_ascii=False, default=str
+    return tool_json(
+        await asyncio.to_thread(_get_note_impl, note_id),
     )
 
 
@@ -392,7 +357,7 @@ async def update_note(
         content: New content, or ``None`` to keep.
         tags: New tags list, or ``None`` to keep.
     """
-    return json.dumps(
+    return tool_json(
         await asyncio.to_thread(
             _update_note_impl,
             note_id=note_id,
@@ -400,8 +365,6 @@ async def update_note(
             content=content,
             tags=tags,
         ),
-        ensure_ascii=False,
-        default=str,
     )
 
 
@@ -412,6 +375,6 @@ async def delete_note(ctx: RunContextWrapper, note_id: str) -> str:
     Args:
         note_id: Note id to delete.
     """
-    return json.dumps(
-        await asyncio.to_thread(_delete_note_impl, note_id), ensure_ascii=False, default=str
+    return tool_json(
+        await asyncio.to_thread(_delete_note_impl, note_id),
     )
