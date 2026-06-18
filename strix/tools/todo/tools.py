@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import json
 import logging
-import tempfile
-import threading
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agents import RunContextWrapper, function_tool
+
+from strix.utils.json_store import JsonStore
+from strix.utils.tool_response import tool_json
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -34,27 +38,13 @@ def _todo_sort_key(todo: dict[str, Any]) -> tuple[int, int, str]:
 
 _todos_storage: dict[str, dict[str, dict[str, Any]]] = {}
 
-_todos_path: Path | None = None
-_todos_io_lock = threading.RLock()
+_store = JsonStore("todos.json")
 
 
 def hydrate_todos_from_disk(state_dir: Path) -> None:
-    global _todos_path  # noqa: PLW0603
-    _todos_path = state_dir / "todos.json"
-    with _todos_io_lock:
+    with _store.lock:
         _todos_storage.clear()
-        if not _todos_path.exists():
-            return
-        try:
-            data = json.loads(_todos_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            logger.exception(
-                "todos.json at %s is unreadable; starting with empty todos",
-                _todos_path,
-            )
-            return
-        if not isinstance(data, dict):
-            return
+        data = _store.hydrate(state_dir)
         loaded = 0
         for aid, by_id in data.items():
             if not isinstance(aid, str) or not isinstance(by_id, dict):
@@ -67,37 +57,17 @@ def hydrate_todos_from_disk(state_dir: Path) -> None:
             if cleaned:
                 _todos_storage[aid] = cleaned
                 loaded += len(cleaned)
-        logger.info(
-            "todos hydrated from %s (%d agent(s), %d todo(s))",
-            _todos_path,
-            len(_todos_storage),
-            loaded,
-        )
+        if loaded:
+            logger.info(
+                "todos hydrated from %s (%d agent(s), %d todo(s))",
+                state_dir / "todos.json",
+                len(_todos_storage),
+                loaded,
+            )
 
 
 def _persist() -> None:
-    path = _todos_path
-    if path is None:
-        return
-    try:
-        payload = json.dumps(_todos_storage, ensure_ascii=False, default=str)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with (
-            _todos_io_lock,
-            tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=str(path.parent),
-                prefix=f".{path.name}.",
-                suffix=".tmp",
-                delete=False,
-            ) as tmp,
-        ):
-            tmp.write(payload)
-            tmp_path = Path(tmp.name)
-        tmp_path.replace(path)
-    except Exception:
-        logger.exception("todos persist to %s failed", path)
+    _store.persist(_todos_storage)
 
 
 def _agent_id_from(ctx: RunContextWrapper) -> str:
@@ -295,10 +265,8 @@ async def create_todo(ctx: RunContextWrapper, todos: str) -> str:
     try:
         tasks = _normalize_bulk_todos(todos)
         if not tasks:
-            return json.dumps(
+            return tool_json(
                 {"success": False, "error": "Provide a non-empty 'todos' list to create"},
-                ensure_ascii=False,
-                default=str,
             )
 
         agent_todos = _get_agent_todos(agent_id)
@@ -318,23 +286,19 @@ async def create_todo(ctx: RunContextWrapper, todos: str) -> str:
             }
             created.append({"todo_id": todo_id, "title": task["title"], "priority": task_priority})
     except (ValueError, TypeError) as e:
-        return json.dumps(
+        return tool_json(
             {"success": False, "error": f"Failed to create todo: {e}"},
-            ensure_ascii=False,
-            default=str,
         )
 
     _persist()
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "created": created,
             "created_count": len(created),
             "todos": _sorted_todos(agent_id),
             "total_count": len(_get_agent_todos(agent_id)),
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
@@ -377,7 +341,7 @@ async def list_todos(
             sv = todo.get("status", "pending")
             summary[sv] = summary.get(sv, 0) + 1
     except (ValueError, TypeError) as e:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": f"Failed to list todos: {e}",
@@ -386,20 +350,16 @@ async def list_todos(
                 "total_count": 0,
                 "summary": {"pending": 0, "in_progress": 0, "done": 0},
             },
-            ensure_ascii=False,
-            default=str,
         )
 
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "todos": todos_list,
             "filtered_count": len(todos_list),
             "total_count": len(agent_todos),
             "summary": summary,
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
@@ -437,11 +397,7 @@ async def update_todo(ctx: RunContextWrapper, updates: str) -> str:
         agent_todos = _get_agent_todos(agent_id)
         updates_to_apply = _normalize_bulk_updates(updates)
         if not updates_to_apply:
-            return json.dumps(
-                {"success": False, "error": "Provide a non-empty 'updates' list"},
-                ensure_ascii=False,
-                default=str,
-            )
+            return tool_json({"success": False, "error": "Provide a non-empty 'updates' list"})
 
         updated: list[str] = []
         errors: list[dict[str, Any]] = []
@@ -459,7 +415,7 @@ async def update_todo(ctx: RunContextWrapper, updates: str) -> str:
             else:
                 updated.append(upd["todo_id"])
     except (ValueError, TypeError) as e:
-        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, default=str)
+        return tool_json({"success": False, "error": str(e)})
 
     if updated:
         _persist()
@@ -472,7 +428,7 @@ async def update_todo(ctx: RunContextWrapper, updates: str) -> str:
     }
     if errors:
         response["errors"] = errors
-    return json.dumps(response, ensure_ascii=False, default=str)
+    return tool_json(response)
 
 
 def _mark(*, agent_id: str, todo_ids: str, new_status: str) -> str:
@@ -481,7 +437,7 @@ def _mark(*, agent_id: str, todo_ids: str, new_status: str) -> str:
         ids = _normalize_todo_ids(todo_ids)
         if not ids:
             msg = f"Provide a non-empty 'todo_ids' list to mark as {new_status}"
-            return json.dumps({"success": False, "error": msg}, ensure_ascii=False, default=str)
+            return tool_json({"success": False, "error": msg})
 
         marked: list[str] = []
         errors: list[dict[str, Any]] = []
@@ -496,7 +452,7 @@ def _mark(*, agent_id: str, todo_ids: str, new_status: str) -> str:
             todo["updated_at"] = timestamp
             marked.append(tid)
     except (ValueError, TypeError) as e:
-        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, default=str)
+        return tool_json({"success": False, "error": str(e)})
 
     if marked:
         _persist()
@@ -510,7 +466,7 @@ def _mark(*, agent_id: str, todo_ids: str, new_status: str) -> str:
     }
     if errors:
         response["errors"] = errors
-    return json.dumps(response, ensure_ascii=False, default=str)
+    return tool_json(response)
 
 
 @function_tool(timeout=30)
@@ -554,10 +510,8 @@ async def delete_todo(ctx: RunContextWrapper, todo_ids: str) -> str:
         agent_todos = _get_agent_todos(agent_id)
         ids = _normalize_todo_ids(todo_ids)
         if not ids:
-            return json.dumps(
+            return tool_json(
                 {"success": False, "error": "Provide a non-empty 'todo_ids' list to delete"},
-                ensure_ascii=False,
-                default=str,
             )
 
         deleted: list[str] = []
@@ -569,7 +523,7 @@ async def delete_todo(ctx: RunContextWrapper, todo_ids: str) -> str:
             del agent_todos[tid]
             deleted.append(tid)
     except (ValueError, TypeError) as e:
-        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False, default=str)
+        return tool_json({"success": False, "error": str(e)})
 
     if deleted:
         _persist()
@@ -582,4 +536,4 @@ async def delete_todo(ctx: RunContextWrapper, todo_ids: str) -> str:
     }
     if errors:
         response["errors"] = errors
-    return json.dumps(response, ensure_ascii=False, default=str)
+    return tool_json(response)

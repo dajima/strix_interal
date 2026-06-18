@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import uuid
 from collections import Counter
@@ -14,6 +13,8 @@ from agents import RunContextWrapper, function_tool
 
 from strix.core.agents import Status, coordinator_from_context
 from strix.skills import validate_requested_skills
+from strix.utils.context import extract_context
+from strix.utils.tool_response import tool_json
 
 
 _ACTIVE_STATUSES: frozenset[str] = frozenset({"running", "waiting"})
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def _ctx(ctx: RunContextWrapper) -> dict[str, Any]:
-    return ctx.context if isinstance(ctx.context, dict) else {}
+    return extract_context(ctx)
 
 
 def _render_completion_report(
@@ -81,10 +82,8 @@ async def view_agent_graph(ctx: RunContextWrapper) -> str:
     coordinator = coordinator_from_context(inner)
     me = inner.get("agent_id")
     if coordinator is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator not initialized in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator not initialized in context"}
         )
 
     parent_of, statuses, names = await coordinator.graph_snapshot()
@@ -107,14 +106,12 @@ async def view_agent_graph(ctx: RunContextWrapper) -> str:
     summary: dict[str, int] = {"total": len(parent_of)}
     for status_name in get_args(Status):
         summary[status_name] = counts.get(status_name, 0)
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "graph_structure": "\n".join(lines) or "(no agents)",
             "summary": summary,
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
@@ -156,22 +153,18 @@ async def send_message_to_agent(
     coordinator = coordinator_from_context(inner)
     me = inner.get("agent_id")
     if coordinator is None or me is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"}
         )
     if target_agent_id == me:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": (
                     "Cannot send a message to yourself; use `think` to record a "
                     "private note, or `agent_finish` / `finish_scan` to terminate"
                 ),
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     msg_id = f"msg_{uuid.uuid4().hex[:8]}"
@@ -186,23 +179,19 @@ async def send_message_to_agent(
         },
     )
     if not delivered:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": f"Target agent '{target_agent_id}' not found or message delivery failed",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "message_id": msg_id,
             "target_agent_id": target_agent_id,
             "delivery_status": "delivered",
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
@@ -255,52 +244,44 @@ async def wait_for_message(  # noqa: PLR0911
     me = inner.get("agent_id")
     interactive = bool(inner.get("interactive", False))
     if coordinator is None or me is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"}
         )
 
     async with coordinator._lock:
         stopped = coordinator.statuses.get(me) == "stopped"
     if stopped:
-        return json.dumps(
+        return tool_json(
             {
                 "success": True,
                 "wait_outcome": "stopped",
                 "reason": reason,
                 "note": "Wait ended because this agent is stopped.",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     pending, items = await coordinator.consume_pending(me, include_items=True)
     if pending > 0:
         await coordinator.mark_running(me)
-        return json.dumps(
+        return tool_json(
             {
                 "success": True,
                 "wait_outcome": "message_arrived",
                 "pending_messages": pending,
                 "messages": _session_items_payload(items),
                 "reason": reason,
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     if interactive:
         await coordinator.park_waiting(me)
-        return json.dumps(
+        return tool_json(
             {
                 "success": True,
                 "wait_outcome": "waiting",
                 "reason": reason,
                 "note": "Agent parked; execution will resume when a message arrives.",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     await coordinator.park_waiting(me)
@@ -308,45 +289,39 @@ async def wait_for_message(  # noqa: PLR0911
         await asyncio.wait_for(coordinator.wait_for_message(me), timeout_seconds)
     except TimeoutError:
         await coordinator.mark_running(me)
-        return json.dumps(
+        return tool_json(
             {
                 "success": True,
                 "wait_outcome": "timeout",
                 "timeout_seconds": timeout_seconds,
                 "reason": reason,
                 "note": "No messages within timeout — continue work or call agent_finish.",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     async with coordinator._lock:
         stopped = coordinator.statuses.get(me) == "stopped"
     if stopped:
-        return json.dumps(
+        return tool_json(
             {
                 "success": True,
                 "wait_outcome": "stopped",
                 "reason": reason,
                 "note": "Wait ended because this agent is stopped.",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     pending, items = await coordinator.consume_pending(me, include_items=True)
     await coordinator.mark_running(me)
 
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "wait_outcome": "message_arrived",
             "pending_messages": pending,
             "messages": _session_items_payload(items),
             "reason": reason,
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
@@ -404,46 +379,30 @@ async def create_agent(
     spawner = inner.get("spawn_child_agent")
 
     if coordinator is None or parent_id is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"}
         )
     if not callable(spawner):
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": "Scan runner did not provide a child-agent spawner in context",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     skill_list = list(skills or [])
     skill_error = validate_requested_skills(skill_list)
     if skill_error:
-        return json.dumps(
-            {"success": False, "error": skill_error, "agent_id": None},
-            ensure_ascii=False,
-            default=str,
-        )
+        return tool_json({"success": False, "error": skill_error, "agent_id": None})
 
     parent_history = list(ctx.turn_input) if inherit_context and ctx.turn_input else []
     try:
         result = await spawner(
-            parent_ctx=inner,
-            name=name,
-            task=task,
-            skills=skill_list,
-            parent_history=parent_history,
+            parent_ctx=inner, name=name, task=task, skills=skill_list, parent_history=parent_history
         )
     except Exception as e:
         logger.exception("create_agent: scan runner failed to spawn child '%s'", name)
-        return json.dumps(
-            {"success": False, "error": f"child spawn failed: {e!s}"},
-            ensure_ascii=False,
-            default=str,
-        )
+        return tool_json({"success": False, "error": f"child spawn failed: {e!s}"})
 
     logger.info(
         "create_agent: spawned %s (%s) parent=%s skills=%d task_len=%d",
@@ -454,11 +413,7 @@ async def create_agent(
         len(task or ""),
     )
 
-    return json.dumps(
-        result,
-        ensure_ascii=False,
-        default=str,
-    )
+    return tool_json(result)
 
 
 @function_tool(timeout=30)
@@ -508,23 +463,19 @@ async def agent_finish(
     coordinator = coordinator_from_context(inner)
     me = inner.get("agent_id")
     if coordinator is None or me is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"}
         )
 
     parent_id = inner.get("parent_id")
     if parent_id is None:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": (
                     "agent_finish is for subagents. Root/main agents must call finish_scan instead"
                 ),
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     parent_notified = False
@@ -561,7 +512,7 @@ async def agent_finish(
     )
     await coordinator.set_status(me, "completed")
 
-    return json.dumps(
+    return tool_json(
         {
             "success": True,
             "agent_completed": True,
@@ -570,18 +521,13 @@ async def agent_finish(
             "summary": result_summary,
             "findings_count": len(findings or []),
             "has_recommendations": bool(final_recommendations),
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )
 
 
 @function_tool(timeout=30)
 async def stop_agent(
-    ctx: RunContextWrapper,
-    target_agent_id: str,
-    cascade: bool = True,
-    reason: str = "",
+    ctx: RunContextWrapper, target_agent_id: str, cascade: bool = True, reason: str = ""
 ) -> str:
     """Gracefully stop a running agent (and optionally its descendants).
 
@@ -608,31 +554,23 @@ async def stop_agent(
     coordinator = coordinator_from_context(inner)
     me = inner.get("agent_id")
     if coordinator is None or me is None:
-        return json.dumps(
-            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
-            ensure_ascii=False,
-            default=str,
+        return tool_json(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"}
         )
     if target_agent_id == me:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": "Cannot stop yourself; call agent_finish or finish_scan instead",
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
     _, statuses, _ = await coordinator.graph_snapshot()
     if target_agent_id not in statuses:
-        return json.dumps(
-            {"success": False, "error": f"Unknown agent_id: {target_agent_id}"},
-            ensure_ascii=False,
-            default=str,
-        )
+        return tool_json({"success": False, "error": f"Unknown agent_id: {target_agent_id}"})
 
     current_status = statuses[target_agent_id]
     if current_status not in _ACTIVE_STATUSES:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "error": (
@@ -644,9 +582,7 @@ async def stop_agent(
                 ),
                 "target_agent_id": target_agent_id,
                 "current_status": current_status,
-            },
-            ensure_ascii=False,
-            default=str,
+            }
         )
 
     if cascade:
@@ -654,20 +590,13 @@ async def stop_agent(
     else:
         await coordinator.request_stop(target_agent_id)
 
-    logger.info(
-        "stop_agent: target=%s cascade=%s reason=%r",
-        target_agent_id,
-        cascade,
-        reason,
-    )
-    return json.dumps(
+    logger.info("stop_agent: target=%s cascade=%s reason=%r", target_agent_id, cascade, reason)
+    return tool_json(
         {
             "success": True,
             "target_agent_id": target_agent_id,
             "cascade": cascade,
             "reason": reason,
             "note": "Cancellation is graceful — current turn completes first.",
-        },
-        ensure_ascii=False,
-        default=str,
+        }
     )

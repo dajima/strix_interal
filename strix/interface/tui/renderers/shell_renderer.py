@@ -1,14 +1,13 @@
 import re
-from functools import cache
 from typing import Any, ClassVar
 
 from pygments.lexers import get_lexer_by_name
-from pygments.styles import get_style_by_name
 from rich.text import Text
 from textual.widgets import Static
 
 from .base_renderer import BaseToolRenderer
 from .registry import register_tool_renderer
+from .syntax_highlight import highlight_tokens
 
 
 MAX_OUTPUT_LINES = 50
@@ -30,12 +29,6 @@ _CONTROL_BYTES_TO_DROP = dict.fromkeys(
     [b for b in range(0x20) if b not in (0x09, 0x0A)] + [0x7F],
     None,
 )
-
-
-@cache
-def _get_style_colors() -> dict[Any, str]:
-    style = get_style_by_name("native")
-    return {token: f"#{style_def['color']}" for token, style_def in style if style_def["color"]}
 
 
 def _parse_sdk_shell_result(result: Any) -> dict[str, Any]:
@@ -127,24 +120,8 @@ def _format_output(output: str) -> Text:
     return text
 
 
-def _get_token_color(token_type: Any) -> str | None:
-    colors = _get_style_colors()
-    while token_type:
-        if token_type in colors:
-            return colors[token_type]
-        token_type = token_type.parent
-    return None
-
-
 def _highlight_bash(code: str) -> Text:
-    lexer = get_lexer_by_name("bash")
-    text = Text()
-    for token_type, token_value in lexer.get_tokens(code):
-        if not token_value:
-            continue
-        color = _get_token_color(token_type)
-        text.append(token_value, style=color)
-    return text
+    return highlight_tokens(get_lexer_by_name("bash"), code)
 
 
 def _append_output(text: Text, parsed: dict[str, Any], tool_status: str) -> None:

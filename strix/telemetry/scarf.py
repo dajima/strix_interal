@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import urllib.parse
 import urllib.request
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from strix.config import load_settings
@@ -12,6 +11,11 @@ from strix.telemetry._common import (
     base_props,
     get_version,
     is_first_run,
+)
+from strix.telemetry._scan_stats import (
+    llm_usage_props,
+    scan_duration_seconds,
+    vulnerability_counts,
 )
 
 
@@ -85,46 +89,17 @@ def finding(severity: str) -> None:
 
 
 def end(report_state: ReportState, exit_reason: str = "completed") -> None:
-    vulnerabilities_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-    for v in report_state.vulnerability_reports:
-        sev = v.get("severity", "info").lower()
-        if sev in vulnerabilities_counts:
-            vulnerabilities_counts[sev] += 1
-
-    duration = 0.0
-    try:
-        scan_start = datetime.fromisoformat(report_state.start_time.replace("Z", "+00:00"))
-        end_iso = report_state.end_time or datetime.now(scan_start.tzinfo).isoformat()
-        duration = (
-            datetime.fromisoformat(end_iso.replace("Z", "+00:00")) - scan_start
-        ).total_seconds()
-    except (ValueError, TypeError, AttributeError):
-        pass
-
-    llm_props: dict[str, int | float] = {}
-    try:
-        usage = report_state.get_total_llm_usage()
-        if isinstance(usage, dict):
-            llm_props = {
-                "llm_requests": int(usage.get("requests") or 0),
-                "llm_input_tokens": int(usage.get("input_tokens") or 0),
-                "llm_output_tokens": int(usage.get("output_tokens") or 0),
-                "llm_tokens": int(usage.get("total_tokens") or 0),
-                "llm_cost": float(usage.get("cost") or 0.0),
-            }
-    except (TypeError, ValueError, AttributeError):
-        pass
-
+    vuln_counts = vulnerability_counts(report_state)
     _send(
         "scan_ended",
         {
             **base_props(),
             "session": SESSION_ID,
             "exit_reason": exit_reason,
-            "duration_seconds": round(duration),
+            "duration_seconds": round(scan_duration_seconds(report_state)),
             "vulnerabilities_total": len(report_state.vulnerability_reports),
-            **{f"vulnerabilities_{k}": v for k, v in vulnerabilities_counts.items()},
-            **llm_props,
+            **{f"vulnerabilities_{k}": v for k, v in vuln_counts.items()},
+            **llm_usage_props(report_state),
         },
     )
 

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Any
 
 from agents import RunContextWrapper, function_tool
 
 from strix.core.agents import coordinator_from_context
+from strix.utils.tool_response import tool_json
 
 
 logger = logging.getLogger(__name__)
@@ -156,7 +156,7 @@ async def finish_scan(
         active_agents = []
 
     if active_agents:
-        return json.dumps(
+        return tool_json(
             {
                 "success": False,
                 "scan_completed": False,
@@ -166,8 +166,6 @@ async def finish_scan(
                 ),
                 "active_agents": active_agents,
             },
-            ensure_ascii=False,
-            default=str,
         )
 
     result = await asyncio.to_thread(
@@ -185,4 +183,4 @@ async def finish_scan(
         and isinstance(me, str)
     ):
         await coordinator.set_status(me, "completed")
-    return json.dumps(result, ensure_ascii=False, default=str)
+    return tool_json(result)

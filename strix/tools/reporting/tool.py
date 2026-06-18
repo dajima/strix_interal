@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from pathlib import PurePosixPath
 from typing import Any
 
 from agents import RunContextWrapper, function_tool
+
+from strix.utils.context import extract_context
+from strix.utils.tool_response import tool_json
 
 
 logger = logging.getLogger(__name__)
@@ -483,7 +485,7 @@ async def create_vulnerability_report(
               that aren't part of the fix.
             - Duplicating the same change across multiple locations.
     """
-    inner = ctx.context if isinstance(ctx.context, dict) else {}
+    inner = extract_context(ctx)
     raw_agent_id = inner.get("agent_id")
     agent_id = raw_agent_id if isinstance(raw_agent_id, str) else None
     agent_name = None
@@ -512,4 +514,4 @@ async def create_vulnerability_report(
         agent_id=agent_id,
         agent_name=agent_name,
     )
-    return json.dumps(result, ensure_ascii=False, default=str)
+    return tool_json(result)
