@@ -74,11 +74,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
 USER pentester
 WORKDIR /tmp
 
-RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
-    go install -v github.com/projectdiscovery/katana/cmd/katana@latest && \
-    go install -v github.com/projectdiscovery/cvemap/cmd/vulnx@latest && \
-    go install -v github.com/jaeles-project/gospider@latest && \
-    go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+# Pin Go tool versions for reproducible builds and supply-chain safety.
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.7.1 && \
+    go install -v github.com/projectdiscovery/katana/cmd/katana@v1.2.0 && \
+    go install -v github.com/projectdiscovery/cvemap/cmd/vulnx@v0.0.8 && \
+    go install -v github.com/jaeles-project/gospider@v1.1.6 && \
+    go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@v1.2.5
 
 RUN nuclei -update-templates
 
@@ -90,11 +91,12 @@ RUN pipx install arjun && \
 ENV NPM_CONFIG_PREFIX=/home/pentester/.npm-global
 RUN mkdir -p /home/pentester/.npm-global
 
-RUN npm install -g retire@latest && \
-    npm install -g eslint@latest && \
-    npm install -g js-beautify@latest && \
-    npm install -g @ast-grep/cli@latest && \
-    npm install -g tree-sitter-cli@latest && \
+# Pin npm tool versions for reproducible builds and supply-chain safety.
+RUN npm install -g retire@5.4.3 && \
+    npm install -g eslint@10.5.0 && \
+    npm install -g js-beautify@1.15.4 && \
+    npm install -g @ast-grep/cli@0.43.0 && \
+    npm install -g tree-sitter-cli@0.25.6 && \
     npm install -g agent-browser@0.26.0
 
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
@@ -165,7 +167,7 @@ USER pentester
 RUN pipx install semgrep && \
     pipx install bandit
 
-RUN npm install -g jshint
+RUN npm install -g jshint@2.13.6
 
 USER root
 
